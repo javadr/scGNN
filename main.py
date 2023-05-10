@@ -12,6 +12,7 @@ import torch.optim as optim
 
 from model import Net
 from rich import print
+import gzip
 
 # system inits
 torch.manual_seed(CFG.seed)
@@ -20,13 +21,18 @@ np.random.seed(CFG.seed)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-if Path('processed.pt').exists():
-    tload = torch.load('processed.pt')
-    data, gd = tload['data'], tload['gd']
+processed_file = 'processed.pt.gz'
+
+if Path(processed_file).exists():
+    print(f"{processed_file} does exist!")
+    with gzip.open(processed_file, 'rb') as f:
+        tload = torch.load(f)
+        data, gd = tload['data'], tload['gd']
 else:
     data = DataSanitizer('matrix.mtx', data_path='./data')
     gd = CellGraph(data.get(), device=device)[0]
-    torch.save({'data': data, 'gd': gd}, 'processed.pt')
+    with gzip.open(processed_file, 'wb') as f:
+        torch.save({'data': data, 'gd': gd}, f)
 
 x, edge_index, n_features = gd.x, gd.edge_index, gd.num_features
 print(gd)
